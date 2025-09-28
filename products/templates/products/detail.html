@@ -1,0 +1,138 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ product.name }} - MyShop{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+        <!-- Product Image -->
+        <div>
+            {% if product.base_image %}
+            <img src="{{ product.base_image.url }}" alt="{{ product.name }}" 
+                 class="w-full h-96 object-cover rounded-lg shadow-md">
+            {% else %}
+            <div class="w-full h-96 bg-gray-200 rounded-lg shadow-md flex items-center justify-center">
+                <i class="fas fa-birthday-cake text-6xl text-gray-400"></i>
+            </div>
+            {% endif %}
+        </div>
+        
+        <!-- Product Details -->
+        <div>
+            <h1 class="text-3xl font-bold text-gray-900 mb-4">{{ product.name }}</h1>
+            <p class="text-gray-600 mb-6">{{ product.description }}</p>
+            
+            <form id="add-to-cart-form" method="post" action="{% url 'cart:add' %}">
+                {% csrf_token %}
+                <input type="hidden" name="product_id" value="{{ product.id }}">
+                
+                <!-- Size Selection -->
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Size *</label>
+                    <select name="size" required class="size-selector w-full p-2 border border-gray-300 rounded-md">
+                        <option value="">Select Size</option>
+                        {% for size in product.sizes.all %}
+                        <option value="{{ size.slug }}" data-price="{{ size.price }}">
+                            {{ size.name }} - KSh {{ size.price }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <!-- Icing Selection -->
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Icing</label>
+                    <select name="icing" class="icing-selector w-full p-2 border border-gray-300 rounded-md">
+                        <option value="">Select Icing</option>
+                        {% for icing in product.icing_options.all %}
+                        <option value="{{ icing.slug }}" data-modifier="{{ icing.price_modifier }}">
+                            {{ icing.name }} {% if icing.price_modifier > 0 %}+ KSh {{ icing.price_modifier }}{% endif %}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <!-- Egg Option -->
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Egg Option</label>
+                    <select name="eggs" class="eggs-selector w-full p-2 border border-gray-300 rounded-md">
+                        <option value="">Select Egg Option</option>
+                        {% for egg_option in egg_options %}
+                        <option value="{{ egg_option.slug }}" data-modifier="{{ egg_option.price_modifier }}">
+                            {{ egg_option.name }} {% if egg_option.price_modifier > 0 %}+ KSh {{ egg_option.price_modifier }}{% endif %}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <!-- Custom Message -->
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Custom Message</label>
+                    <textarea name="message" rows="3" 
+                              class="w-full p-2 border border-gray-300 rounded-md" 
+                              placeholder="Add a custom message for your cake"></textarea>
+                </div>
+                
+                <!-- Quantity -->
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Quantity</label>
+                    <input type="number" name="quantity" value="1" min="1" 
+                           class="w-20 p-2 border border-gray-300 rounded-md">
+                </div>
+                
+                <!-- Price Display -->
+                <div class="mb-6">
+                    <p class="text-2xl font-bold text-gray-900">
+                        Total: KSh <span id="final-price">0.00</span>
+                    </p>
+                </div>
+                
+                <!-- Add to Cart Button -->
+                <button type="submit" 
+                        class="w-full bg-pink-600 text-white py-3 px-6 rounded-md hover:bg-pink-700 transition duration-200">
+                    Add to Cart
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const sizeSelector = document.querySelector('.size-selector');
+    const icingSelector = document.querySelector('.icing-selector');
+    const eggsSelector = document.querySelector('.eggs-selector');
+    const finalPriceElement = document.getElementById('final-price');
+    
+    function calculatePrice() {
+        const selectedSize = sizeSelector.options[sizeSelector.selectedIndex];
+        const selectedIcing = icingSelector.options[icingSelector.selectedIndex];
+        const selectedEggs = eggsSelector.options[eggsSelector.selectedIndex];
+        
+        let price = 0;
+        
+        if (selectedSize && selectedSize.dataset.price) {
+            price += parseFloat(selectedSize.dataset.price);
+        }
+        
+        if (selectedIcing && selectedIcing.dataset.modifier) {
+            price += parseFloat(selectedIcing.dataset.modifier);
+        }
+        
+        if (selectedEggs && selectedEggs.dataset.modifier) {
+            price += parseFloat(selectedEggs.dataset.modifier);
+        }
+        
+        finalPriceElement.textContent = price.toFixed(2);
+    }
+    
+    sizeSelector.addEventListener('change', calculatePrice);
+    icingSelector.addEventListener('change', calculatePrice);
+    eggsSelector.addEventListener('change', calculatePrice);
+    
+    // Initial calculation
+    calculatePrice();
+});
+</script>
+{% endblock %}

@@ -1,0 +1,149 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Shopping Cart - MyShop{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto px-4 py-8">
+    <h1 class="text-3xl font-bold text-gray-900 mb-8">Shopping Cart</h1>
+
+    {% if cart %}
+    <div class="bg-white rounded-lg shadow-md overflow-hidden">
+        <!-- Cart Items -->
+        <div class="divide-y divide-gray-200">
+            {% for item in cart %}
+            <div class="p-6 flex flex-col md:flex-row items-start md:items-center gap-4">
+                <!-- Product Info -->
+                <div class="flex-1">
+                    <h3 class="text-lg font-semibold text-gray-900">{{ item.product_name }}</h3>
+                    
+                    <!-- Customization Details -->
+                    <div class="mt-2 text-sm text-gray-600 space-y-1">
+                        {% if item.size_name %}
+                        <p><strong>Size:</strong> {{ item.size_name }}</p>
+                        {% endif %}
+                        {% if item.icing_name %}
+                        <p><strong>Icing:</strong> {{ item.icing_name }}</p>
+                        {% endif %}
+                        {% if item.eggs_name %}
+                        <p><strong>Eggs:</strong> {{ item.eggs_name }}</p>
+                        {% endif %}
+                        {% if item.message %}
+                        <p><strong>Message:</strong> "{{ item.message }}"</p>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Price and Quantity -->
+                <div class="flex items-center space-x-6">
+                    <div class="text-right">
+                        <p class="text-lg font-semibold text-pink-600">KSh {{ item.unit_price }}</p>
+                        <p class="text-sm text-gray-500">each</p>
+                    </div>
+                    
+                    <!-- Quantity Controls -->
+                    <div class="flex items-center border border-gray-300 rounded-lg">
+                        <form method="post" action="{% url 'cart:update' %}" class="flex items-center">
+                            {% csrf_token %}
+                            <input type="hidden" name="key" value="{{ item.key }}">
+                            <button type="submit" name="quantity" value="{{ item.quantity|add:'-1' }}" 
+                                    class="px-3 py-1 text-gray-600 hover:text-pink-600">
+                                <i class="fas fa-minus"></i>
+                            </button>
+                            <span class="px-3 py-1 border-l border-r border-gray-300">{{ item.quantity }}</span>
+                            <button type="submit" name="quantity" value="{{ item.quantity|add:'1' }}" 
+                                    class="px-3 py-1 text-gray-600 hover:text-pink-600">
+                                <i class="fas fa-plus"></i>
+                            </button>
+                        </form>
+                    </div>
+
+                    <!-- Total Price -->
+                    <div class="text-right min-w-20">
+                        <p class="text-lg font-bold text-gray-900">KSh {{ item.total_price }}</p>
+                    </div>
+
+                    <!-- Remove Button -->
+                    <form method="post" action="{% url 'cart:remove' %}">
+                        {% csrf_token %}
+                        <input type="hidden" name="key" value="{{ item.key }}">
+                        <button type="submit" class="text-red-600 hover:text-red-800 p-2">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </form>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- Cart Summary -->
+        <div class="bg-gray-50 p-6">
+            <div class="flex justify-between items-center mb-4">
+                <span class="text-lg font-semibold">Subtotal</span>
+                <span class="text-lg font-bold text-pink-600">KSh {{ cart.get_total }}</span>
+            </div>
+            <p class="text-sm text-gray-600 mb-6">Shipping calculated at checkout</p>
+            
+            <div class="flex flex-col sm:flex-row gap-4">
+                <a href="{% url 'products:list' %}" 
+                   class="flex-1 bg-gray-200 text-gray-800 py-3 px-6 rounded-lg text-center hover:bg-gray-300 transition duration-300">
+                    Continue Shopping
+                </a>
+                <a href="{% url 'orders:checkout' %}" 
+                   class="flex-1 bg-pink-600 text-white py-3 px-6 rounded-lg text-center hover:bg-pink-700 transition duration-300">
+                    Proceed to Checkout
+                </a>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="text-center py-12">
+        <i class="fas fa-shopping-cart text-6xl text-gray-300 mb-4"></i>
+        <h3 class="text-xl font-semibold text-gray-600">Your cart is empty</h3>
+        <p class="text-gray-500 mt-2 mb-6">Add some delicious cakes to your cart!</p>
+        <a href="{% url 'products:list' %}" 
+           class="bg-pink-600 text-white px-6 py-3 rounded-lg hover:bg-pink-700 transition duration-300">
+            Browse Cakes
+        </a>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Add smooth animations for cart updates
+    const updateForms = document.querySelectorAll('form[action*="update"]');
+    updateForms.forEach(form => {
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(this);
+            fetch(this.action, {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Reload page to update cart display
+                    location.reload();
+                }
+            });
+        });
+    });
+
+    // Add confirmation for remove buttons
+    const removeForms = document.querySelectorAll('form[action*="remove"]');
+    removeForms.forEach(form => {
+        form.addEventListener('submit', function(e) {
+            if (!confirm('Are you sure you want to remove this item from your cart?')) {
+                e.preventDefault();
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

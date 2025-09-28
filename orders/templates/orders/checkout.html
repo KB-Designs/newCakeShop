@@ -1,0 +1,213 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Checkout - MyShop{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto px-4 py-8">
+    <h1 class="text-3xl font-bold text-gray-900 mb-8">Checkout</h1>
+
+    {% if messages %}
+    <div class="mb-6">
+        {% for message in messages %}
+        <div class="bg-{% if message.tags == 'error' %}red{% else %}green{% endif %}-100 border border-{% if message.tags == 'error' %}red{% else %}green{% endif %}-400 text-{% if message.tags == 'error' %}red{% else %}green{% endif %}-700 px-4 py-3 rounded relative mb-4" role="alert">
+            <span class="block sm:inline">{{ message }}</span>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <!-- Checkout Form -->
+        <div>
+            <form method="post" class="bg-white rounded-lg shadow-md p-6">
+                {% csrf_token %}
+                
+                <h2 class="text-xl font-semibold mb-6">Shipping Information</h2>
+                
+                <!-- Name -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                    <div>
+                        <label for="first_name" class="block text-sm font-medium text-gray-700 mb-2">First Name *</label>
+                        <input type="text" id="first_name" name="first_name" required
+                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent">
+                    </div>
+                    <div>
+                        <label for="last_name" class="block text-sm font-medium text-gray-700 mb-2">Last Name *</label>
+                        <input type="text" id="last_name" name="last_name" required
+                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent">
+                    </div>
+                </div>
+
+                <!-- Contact -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                    <div>
+                        <label for="phone" class="block text-sm font-medium text-gray-700 mb-2">Phone *</label>
+                        <input type="tel" id="phone" name="phone" required
+                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent"
+                               placeholder="254700000000">
+                    </div>
+                    <div>
+                        <label for="email" class="block text-sm font-medium text-gray-700 mb-2">Email *</label>
+                        <input type="email" id="email" name="email" required
+                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent"
+                               placeholder="your@email.com">
+                    </div>
+                </div>
+
+                <!-- Location -->
+                <div class="mb-4">
+                    <label for="county" class="block text-sm font-medium text-gray-700 mb-2">County *</label>
+                    <select id="county" name="county" required
+                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent">
+                        <option value="">Select County</option>
+                        {% for county in counties %}
+                        <option value="{{ county }}">{{ county }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="mb-6">
+                    <label for="pickup_station" class="block text-sm font-medium text-gray-700 mb-2">Pickup Station *</label>
+                    <select id="pickup_station" name="pickup_station" required
+                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent">
+                        <option value="">Select County First</option>
+                    </select>
+                </div>
+
+                <!-- Payment Method -->
+                <div class="mb-6">
+                    <h3 class="text-lg font-semibold mb-4">Payment Method *</h3>
+                    <div class="space-y-3">
+                        <label class="flex items-center space-x-3 p-4 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50">
+                            <input type="radio" name="payment_method" value="M-Pesa" required class="text-pink-600 focus:ring-pink-500">
+                            <div>
+                                <span class="font-medium">M-Pesa</span>
+                                <p class="text-sm text-gray-600">Pay securely with M-Pesa</p>
+                            </div>
+                        </label>
+                        <label class="flex items-center space-x-3 p-4 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50">
+                            <input type="radio" name="payment_method" value="COD" required class="text-pink-600 focus:ring-pink-500">
+                            <div>
+                                <span class="font-medium">Cash on Delivery</span>
+                                <p class="text-sm text-gray-600">Pay when you pickup your order</p>
+                            </div>
+                        </label>
+                    </div>
+                    <p id="payment-error" class="text-red-600 text-sm mt-2 hidden">Please select a payment method</p>
+                </div>
+
+                <button type="submit" id="submit-btn"
+                        class="w-full bg-pink-600 text-white py-3 px-6 rounded-lg hover:bg-pink-700 transition duration-300 font-semibold">
+                    Complete Order
+                </button>
+            </form>
+        </div>
+
+        <!-- Order Summary -->
+        <div>
+            <div class="bg-white rounded-lg shadow-md p-6 sticky top-4">
+                <h2 class="text-xl font-semibold mb-6">Order Summary</h2>
+                
+                {% for item in cart %}
+                <div class="flex items-center space-x-4 py-4 border-b border-gray-200">
+                    <div class="flex-1">
+                        <h4 class="font-medium text-gray-900">{{ item.product_name }}</h4>
+                        <div class="text-sm text-gray-600 mt-1">
+                            {% if item.size_name %}{{ item.size_name }}{% endif %}
+                            {% if item.icing_name %} • {{ item.icing_name }}{% endif %}
+                            {% if item.eggs_name %} • {{ item.eggs_name }}{% endif %}
+                        </div>
+                        <div class="text-sm text-gray-500">Qty: {{ item.quantity }}</div>
+                    </div>
+                    <div class="text-right">
+                        <span class="font-semibold text-pink-600">KSh {{ item.total_price }}</span>
+                    </div>
+                </div>
+                {% endfor %}
+
+                <div class="mt-6 space-y-3">
+                    <div class="flex justify-between text-lg font-semibold">
+                        <span>Total</span>
+                        <span class="text-pink-600">KSh {{ cart.get_total }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const countySelect = document.getElementById('county');
+    const stationSelect = document.getElementById('pickup_station');
+    const paymentRadios = document.querySelectorAll('input[name="payment_method"]');
+    const paymentError = document.getElementById('payment-error');
+    const submitBtn = document.getElementById('submit-btn');
+    const form = document.querySelector('form');
+
+    // County-Station dependency
+    countySelect.addEventListener('change', function() {
+        const county = this.value;
+        
+        if (county) {
+            // Fetch stations for selected county
+            fetch(`{% url 'orders:county_stations' %}?county=${county}`)
+                .then(response => response.json())
+                .then(data => {
+                    stationSelect.innerHTML = '<option value="">Select Pickup Station</option>';
+                    data.stations.forEach(station => {
+                        stationSelect.innerHTML += `<option value="${station}">${station}</option>`;
+                    });
+                })
+                .catch(error => {
+                    console.error('Error fetching stations:', error);
+                    stationSelect.innerHTML = '<option value="">Error loading stations</option>';
+                });
+        } else {
+            stationSelect.innerHTML = '<option value="">Select County First</option>';
+        }
+    });
+
+    // Payment method validation
+    function validatePayment() {
+        const isPaymentSelected = Array.from(paymentRadios).some(radio => radio.checked);
+        if (!isPaymentSelected) {
+            paymentError.classList.remove('hidden');
+            return false;
+        }
+        paymentError.classList.add('hidden');
+        return true;
+    }
+
+    // Validate payment method on radio change
+    paymentRadios.forEach(radio => {
+        radio.addEventListener('change', validatePayment);
+    });
+
+    // Form submission
+    form.addEventListener('submit', function(e) {
+        if (!validatePayment()) {
+            e.preventDefault();
+            // Scroll to payment section
+            document.querySelector('.mb-6').scrollIntoView({ 
+                behavior: 'smooth',
+                block: 'center'
+            });
+        } else {
+            // Disable button to prevent double submission
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = 'Processing...';
+        }
+    });
+
+    // Re-enable button if validation fails and form doesn't submit
+    form.addEventListener('invalid', function() {
+        setTimeout(() => {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = 'Complete Order';
+        }, 1000);
+    }, true);
+});
+</script>
+{% endblock %}

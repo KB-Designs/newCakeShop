@@ -1,0 +1,107 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Our Cakes - MyShop{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 py-8">
+    <div class="flex flex-col lg:flex-row gap-8">
+        <!-- Sidebar Filters -->
+        <div class="lg:w-1/4">
+            <div class="bg-white rounded-lg shadow-md p-6 sticky top-4">
+                <h3 class="text-lg font-semibold mb-4">Filter by Category</h3>
+                <ul class="space-y-2">
+                    <li>
+                        <a href="{% url 'products:list' %}" 
+                           class="block py-2 px-3 rounded {% if not selected_category %}bg-pink-50 text-pink-600{% else %}text-gray-700 hover:bg-gray-50{% endif %}">
+                            All Categories
+                        </a>
+                    </li>
+                    {% for category in categories %}
+                    <li>
+                        <a href="{% url 'products:list' %}?category={{ category.slug }}" 
+                           class="block py-2 px-3 rounded {% if selected_category == category.slug %}bg-pink-50 text-pink-600{% else %}text-gray-700 hover:bg-gray-50{% endif %}">
+                            {{ category.name }}
+                        </a>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+
+        <!-- Product Grid -->
+        <div class="lg:w-3/4">
+            <div class="mb-6">
+                <h1 class="text-3xl font-bold text-gray-900">
+                    {% if selected_category %}
+                        {% for category in categories %}
+                            {% if category.slug == selected_category %}
+                                {{ category.name }} Cakes
+                            {% endif %}
+                        {% endfor %}
+                    {% else %}
+                        All Cakes
+                    {% endif %}
+                </h1>
+                <p class="text-gray-600 mt-2">{{ products|length }} products found</p>
+            </div>
+
+            {% if products %}
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {% for product in products %}
+                <div class="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition duration-300">
+                    {% if product.base_image %}
+                    <img src="{{ product.base_image.url }}" alt="{{ product.name }}" 
+                         class="w-full h-48 object-cover">
+                    {% else %}
+                    <div class="w-full h-48 bg-gray-200 flex items-center justify-center">
+                        <i class="fas fa-birthday-cake text-4xl text-gray-400"></i>
+                    </div>
+                    {% endif %}
+                    <div class="p-6">
+                        <h3 class="text-xl font-semibold mb-2">{{ product.name }}</h3>
+                        <p class="text-gray-600 mb-4 text-sm">{{ product.description|truncatewords:15 }}</p>
+                        
+                        <!-- Price Range -->
+                        <div class="mb-4">
+                            {% with sizes=product.sizes.all %}
+                                {% if sizes %}
+                                    {% with first_size=sizes.first last_size=sizes.last %}
+                                    <span class="text-lg font-bold text-pink-600">
+                                        KSh {{ first_size.price }}
+                                        {% if first_size != last_size %}
+                                        - KSh {{ last_size.price }}
+                                        {% endif %}
+                                    </span>
+                                    {% endwith %}
+                                {% else %}
+                                    <span class="text-lg font-bold text-pink-600">KSh {{ product.base_price }}</span>
+                                {% endif %}
+                            {% endwith %}
+                        </div>
+
+                        <div class="flex justify-between items-center">
+                            <span class="text-sm text-gray-500">{{ product.category.name }}</span>
+                            <a href="{% url 'products:detail' product.slug %}" 
+                               class="bg-pink-600 text-white px-4 py-2 rounded text-sm hover:bg-pink-700 transition duration-300">
+                                View Details
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="text-center py-12">
+                <i class="fas fa-birthday-cake text-6xl text-gray-300 mb-4"></i>
+                <h3 class="text-xl font-semibold text-gray-600">No cakes found</h3>
+                <p class="text-gray-500 mt-2">Try selecting a different category</p>
+                <a href="{% url 'products:list' %}" class="inline-block mt-4 bg-pink-600 text-white px-6 py-2 rounded hover:bg-pink-700">
+                    View All Cakes
+                </a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
