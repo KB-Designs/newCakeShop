@@ -11,6 +11,8 @@ class Order(models.Model):
         ('pending', 'Pending'),
         ('paid', 'Paid'),
         ('failed', 'Failed'),
+        ('cancelled', 'Cancelled'),
+        ('timeout', 'Payment Timeout'),
         ('fulfilled', 'Fulfilled'),
     ]
     
@@ -27,17 +29,26 @@ class Order(models.Model):
     transaction_id = models.CharField(max_length=100, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    payment_initiated_at = models.DateTimeField(null=True, blank=True)
     
     class Meta:
         ordering = ['-created_at']
     
     def __str__(self):
         return f"Order #{self.id} - {self.first_name} {self.last_name}"
+    
+    def is_payment_expired(self):
+        """Check if payment initiation is older than 2 minutes"""
+        from django.utils import timezone
+        if self.payment_initiated_at:
+            return (timezone.now() - self.payment_initiated_at).total_seconds() > 120  # 2 minutes
+        return False
 
+# OrderItem model remains the same...
 class OrderItem(models.Model):
     order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='items')
     product_name = models.CharField(max_length=200)
-    product = models.ForeignKey('products.Product', on_delete=models.SET_NULL, null=True, blank=True, related_name='order_items')  # Add related_name
+    product = models.ForeignKey('products.Product', on_delete=models.SET_NULL, null=True, blank=True)
     size = models.CharField(max_length=50, blank=True)
     icing = models.CharField(max_length=100, blank=True)
     eggs = models.CharField(max_length=50, blank=True)

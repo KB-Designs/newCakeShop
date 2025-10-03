@@ -5,15 +5,107 @@
 
 {% block content %}
 <div class="max-w-2xl mx-auto px-4 py-8 text-center">
-    <!-- Success Icon -->
+    <!-- Success Icon - Dynamic based on status -->
     <div class="mb-6">
-        <div class="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto">
+        <div class="w-20 h-20 rounded-full flex items-center justify-center mx-auto 
+            {% if order.status == 'paid' %}bg-green-100
+            {% elif order.status == 'failed' or order.status == 'cancelled' %}bg-red-100
+            {% elif order.status == 'timeout' %}bg-yellow-100
+            {% else %}bg-blue-100{% endif %}">
+            {% if order.status == 'paid' %}
             <i class="fas fa-check text-green-600 text-2xl"></i>
+            {% elif order.status == 'failed' or order.status == 'cancelled' %}
+            <i class="fas fa-times text-red-600 text-2xl"></i>
+            {% elif order.status == 'timeout' %}
+            <i class="fas fa-clock text-yellow-600 text-2xl"></i>
+            {% else %}
+            <i class="fas fa-hourglass-half text-blue-600 text-2xl"></i>
+            {% endif %}
         </div>
     </div>
 
-    <h1 class="text-3xl font-bold text-gray-900 mb-4">Order Confirmed!</h1>
-    <p class="text-xl text-gray-600 mb-8">Thank you for your order, {{ order.first_name }}!</p>
+    <h1 class="text-3xl font-bold text-gray-900 mb-4" id="status-title">
+        {% if order.status == 'paid' %}Payment Confirmed!
+        {% elif order.status == 'failed' %}Payment Failed
+        {% elif order.status == 'cancelled' %}Payment Cancelled
+        {% elif order.status == 'timeout' %}Payment Timeout
+        {% else %}Order Confirmed!{% endif %}
+    </h1>
+    
+    <p class="text-xl text-gray-600 mb-8" id="status-message">
+        {% if order.status == 'paid' %}
+        Thank you for your payment, {{ order.first_name }}!
+        {% elif order.status == 'failed' %}
+        Sorry, your payment failed. Please try again.
+        {% elif order.status == 'cancelled' %}
+        You cancelled the payment. Your order is still saved.
+        {% elif order.status == 'timeout' %}
+        Payment timed out. Please try again.
+        {% else %}
+        Thank you for your order, {{ order.first_name }}!
+        {% endif %}
+    </p>
+
+    <!-- Payment Status Alert -->
+    {% if order.payment_method == 'M-Pesa' %}
+    <div id="payment-alert" class="mb-6 transition-all duration-300">
+        {% if order.status == 'pending' %}
+        <div class="bg-blue-50 border border-blue-200 rounded-lg p-6">
+            <div class="flex items-center justify-center mb-4">
+                <i class="fas fa-mobile-alt text-blue-600 text-2xl mr-3"></i>
+                <h3 class="text-lg font-semibold text-blue-800">M-Pesa Payment Pending</h3>
+            </div>
+            <p class="text-blue-700 mb-4">
+                We've sent an M-Pesa prompt to <strong>{{ order.phone }}</strong>. 
+                Please check your phone and enter your M-Pesa PIN to complete the payment.
+            </p>
+            <div class="bg-white rounded-lg p-4 mb-4">
+                <div class="flex justify-between items-center">
+                    <span class="font-semibold">Amount to Pay:</span>
+                    <span class="text-lg font-bold text-pink-600">KSh {{ order.total }}</span>
+                </div>
+            </div>
+            <div class="flex items-center justify-center space-x-2 text-sm text-blue-600">
+                <i class="fas fa-sync-alt fa-spin"></i>
+                <span id="status-text">Waiting for payment confirmation...</span>
+            </div>
+            <div class="mt-4 text-xs text-gray-500">
+                <p>If you don't complete the payment within 2 minutes, it will expire.</p>
+            </div>
+        </div>
+        {% elif order.status == 'cancelled' %}
+        <div class="bg-red-50 border border-red-200 rounded-lg p-6">
+            <div class="flex items-center justify-center mb-4">
+                <i class="fas fa-times-circle text-red-600 text-2xl mr-3"></i>
+                <h3 class="text-lg font-semibold text-red-800">Payment Cancelled</h3>
+            </div>
+            <p class="text-red-700 mb-4">
+                You cancelled the M-Pesa payment. Your order is still saved and you can retry the payment.
+            </p>
+        </div>
+        {% elif order.status == 'timeout' %}
+        <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-6">
+            <div class="flex items-center justify-center mb-4">
+                <i class="fas fa-clock text-yellow-600 text-2xl mr-3"></i>
+                <h3 class="text-lg font-semibold text-yellow-800">Payment Timeout</h3>
+            </div>
+            <p class="text-yellow-700 mb-4">
+                The payment request has expired. Please initiate a new payment.
+            </p>
+        </div>
+        {% elif order.status == 'failed' %}
+        <div class="bg-red-50 border border-red-200 rounded-lg p-6">
+            <div class="flex items-center justify-center mb-4">
+                <i class="fas fa-exclamation-triangle text-red-600 text-2xl mr-3"></i>
+                <h3 class="text-lg font-semibold text-red-800">Payment Failed</h3>
+            </div>
+            <p class="text-red-700 mb-4">
+                The payment failed. Please check your M-Pesa balance and try again.
+            </p>
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
 
     <!-- Order Details -->
     <div class="bg-white rounded-lg shadow-md p-6 mb-8 text-left">
@@ -25,13 +117,17 @@
                 <p class="text-gray-600">Order #{{ order.id }}</p>
                 <p class="text-gray-600">Date: {{ order.created_at|date:"M d, Y" }}</p>
                 <p class="text-gray-600">Status: 
-                    <span class="font-semibold 
+                    <span id="status-badge" class="font-semibold 
                         {% if order.status == 'paid' %}text-green-600
-                        {% elif order.status == 'failed' %}text-red-600
-                        {% else %}text-yellow-600{% endif %}">
+                        {% elif order.status == 'failed' or order.status == 'cancelled' %}text-red-600
+                        {% elif order.status == 'timeout' %}text-yellow-600
+                        {% else %}text-blue-600{% endif %}">
                         {{ order.get_status_display }}
                     </span>
                 </p>
+                {% if order.transaction_id %}
+                <p class="text-gray-600">Transaction ID: {{ order.transaction_id }}</p>
+                {% endif %}
             </div>
             <div>
                 <h3 class="font-semibold text-gray-700">Pickup Information</h3>
@@ -75,38 +171,18 @@
         </div>
     </div>
 
-    <!-- Payment Status -->
-    {% if order.payment_method == 'M-Pesa' and order.status == 'pending' %}
-    <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-6 mb-6">
-        <div class="flex items-center justify-center mb-4">
-            <i class="fas fa-clock text-yellow-600 text-2xl mr-3"></i>
-            <h3 class="text-lg font-semibold text-yellow-800">Payment Processing</h3>
-        </div>
-        <p class="text-yellow-700 mb-4">
-            We're processing your M-Pesa payment. You should receive a prompt on your phone shortly.
-        </p>
-        <p class="text-sm text-yellow-600">
-            If you don't receive the prompt, please check your phone and try again.
-        </p>
-    </div>
-    {% elif order.payment_method == 'COD' %}
-    <div class="bg-blue-50 border border-blue-200 rounded-lg p-6 mb-6">
-        <div class="flex items-center justify-center mb-4">
-            <i class="fas fa-money-bill-wave text-blue-600 text-2xl mr-3"></i>
-            <h3 class="text-lg font-semibold text-blue-800">Cash on Delivery</h3>
-        </div>
-        <p class="text-blue-700">
-            Please bring exact change when you come to pickup your order.
-        </p>
-    </div>
-    {% endif %}
-
-    <!-- Next Steps -->
+    <!-- Action Buttons -->
     <div class="space-y-4">
-        <p class="text-gray-600">
-            We'll send you an email confirmation at <strong>{{ order.email }}</strong> 
-            with your order details and pickup instructions.
-        </p>
+        {% if order.payment_method == 'M-Pesa' and order.status == 'pending' or order.status == 'cancelled' or order.status == 'timeout' or order.status == 'failed' %}
+        <div class="bg-gray-50 rounded-lg p-4 mb-4">
+            <h4 class="font-semibold text-gray-800 mb-2">Need to retry payment?</h4>
+            <p class="text-sm text-gray-600 mb-3">You can initiate a new M-Pesa payment for this order.</p>
+            <button onclick="retryPayment()" 
+                    class="bg-pink-600 text-white px-6 py-2 rounded-lg hover:bg-pink-700 transition duration-300">
+                Retry M-Pesa Payment
+            </button>
+        </div>
+        {% endif %}
         
         <div class="flex flex-col sm:flex-row gap-4 justify-center">
             <a href="{% url 'products:list' %}" 
@@ -120,4 +196,120 @@
         </div>
     </div>
 </div>
+
+<script>
+let checkInterval;
+let orderId = {{ order.id }};
+
+// Function to update UI based on status
+function updateUI(status, statusDisplay, transactionId) {
+    const statusTitle = document.getElementById('status-title');
+    const statusMessage = document.getElementById('status-message');
+    const statusBadge = document.getElementById('status-badge');
+    const statusText = document.getElementById('status-text');
+    const paymentAlert = document.getElementById('payment-alert');
+    
+    // Update texts
+    if (statusText) statusText.textContent = getStatusText(status);
+    
+    // Update main title and message
+    const { title, message } = getStatusContent(status);
+    statusTitle.textContent = title;
+    statusMessage.textContent = message;
+    statusBadge.textContent = statusDisplay;
+    
+    // Update status badge color
+    statusBadge.className = 'font-semibold ' + getStatusColor(status);
+    
+    // Update alert content if needed
+    if (paymentAlert && status !== 'pending') {
+        // For demo, we'll reload the page to show updated alert
+        // In production, you'd update the alert content dynamically
+        setTimeout(() => {
+            window.location.reload();
+        }, 2000);
+    }
+}
+
+function getStatusText(status) {
+    const statusTexts = {
+        'pending': 'Waiting for payment confirmation...',
+        'paid': 'Payment confirmed!',
+        'cancelled': 'Payment was cancelled',
+        'timeout': 'Payment timed out',
+        'failed': 'Payment failed'
+    };
+    return statusTexts[status] || 'Checking status...';
+}
+
+function getStatusContent(status) {
+    const contents = {
+        'pending': { title: 'Order Confirmed!', message: 'Thank you for your order!' },
+        'paid': { title: 'Payment Confirmed!', message: 'Thank you for your payment!' },
+        'cancelled': { title: 'Payment Cancelled', message: 'You cancelled the payment.' },
+        'timeout': { title: 'Payment Timeout', message: 'Payment request expired.' },
+        'failed': { title: 'Payment Failed', message: 'Sorry, your payment failed.' }
+    };
+    return contents[status] || contents.pending;
+}
+
+function getStatusColor(status) {
+    const colors = {
+        'paid': 'text-green-600',
+        'failed': 'text-red-600',
+        'cancelled': 'text-red-600', 
+        'timeout': 'text-yellow-600',
+        'pending': 'text-blue-600'
+    };
+    return colors[status] || 'text-blue-600';
+}
+
+// Function to check payment status
+function checkPaymentStatus() {
+    fetch(`/checkout/payment-status/${orderId}/`)
+        .then(response => response.json())
+        .then(data => {
+            console.log('Payment status:', data);
+            
+            updateUI(data.status, data.status_display, data.transaction_id);
+            
+            // Stop checking if payment is completed (success or failure)
+            if (data.status !== 'pending') {
+                clearInterval(checkInterval);
+                
+                // If payment failed, cancelled, or timed out, show retry option
+                if (['failed', 'cancelled', 'timeout'].includes(data.status)) {
+                    // The page will reload to show the updated status
+                }
+            }
+        })
+        .catch(error => {
+            console.error('Error checking payment status:', error);
+        });
+}
+
+// Function to retry payment
+function retryPayment() {
+    if (confirm('Initiate a new M-Pesa payment for this order?')) {
+        // Redirect to a retry payment endpoint (you'd need to implement this)
+        window.location.href = `/checkout/retry-payment/${orderId}/`;
+    }
+}
+
+// Start checking payment status if order is pending
+{% if order.payment_method == 'M-Pesa' and order.status == 'pending' %}
+document.addEventListener('DOMContentLoaded', function() {
+    // Check immediately
+    checkPaymentStatus();
+    
+    // Then check every 3 seconds
+    checkInterval = setInterval(checkPaymentStatus, 3000);
+    
+    // Stop checking after 10 minutes (payment expiry)
+    setTimeout(function() {
+        clearInterval(checkInterval);
+    }, 120000);
+});
+{% endif %}
+</script>
 {% endblock %}

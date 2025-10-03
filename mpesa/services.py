@@ -30,18 +30,24 @@ class MpesaService:
         }
         
         try:
-            response = requests.get(url, headers=headers)
+            response = requests.get(url, headers=headers, timeout=30)
             response.raise_for_status()
-            return response.json().get('access_token')
-        except requests.RequestException as e:
+            data = response.json()
+            return data.get('access_token')
+        except requests.exceptions.RequestException as e:
             logger.error(f"Error getting access token: {e}")
+            logger.error(f"Response: {getattr(e, 'response', None)}")
+            return None
+        except Exception as e:
+            logger.error(f"Unexpected error getting access token: {e}")
             return None
     
     def stk_push(self, phone, amount, order_id, description="Cake Purchase"):
         """Initiate STK Push request"""
         access_token = self.get_access_token()
         if not access_token:
-            return None
+            logger.error("Failed to get access token")
+            return {'error': 'Failed to get access token'}
         
         url = f"{self.base_url}/mpesa/stkpush/v1/processrequest"
         
@@ -53,16 +59,19 @@ class MpesaService:
         password = base64.b64encode(password_string.encode()).decode()
         
         # Format phone number (remove leading + or 0)
-        phone = phone.lstrip('+').lstrip('0')
+        phone = str(phone).lstrip('+').lstrip('0')
         if not phone.startswith('254'):
-            phone = '254' + phone
+            if len(phone) == 9:  # Local number without 254
+                phone = '254' + phone
+            elif len(phone) == 10:  # Number with leading 0
+                phone = '254' + phone[1:]
         
         payload = {
             "BusinessShortCode": self.shortcode,
             "Password": password,
             "Timestamp": timestamp,
             "TransactionType": "CustomerPayBillOnline",
-            "Amount": amount,
+            "Amount": int(amount),
             "PartyA": phone,
             "PartyB": self.shortcode,
             "PhoneNumber": phone,
@@ -77,13 +86,20 @@ class MpesaService:
         }
         
         try:
-            response = requests.post(url, json=payload, headers=headers)
+            logger.info(f"Sending STK Push request for order {order_id}")
+            logger.info(f"Payload: {json.dumps(payload, indent=2)}")
+            
+            response = requests.post(url, json=payload, headers=headers, timeout=30)
             response_data = response.json()
             
-            # Log the response (without sensitive data)
-            logger.info(f"STK Push response for order {order_id}: {response_data}")
+            logger.info(f"STK Push response for order {order_id}: {json.dumps(response_data, indent=2)}")
             
             return response_data
-        except requests.RequestException as e:
-            logger.error(f"Error in STK Push: {e}")
-            return None
+            
+        except requests.exceptions.RequestException as e:
+            logger.error(f"Error in STK Push request: {e}")
+            logger.error(f"Response: {getattr(e, 'response', None)}")
+            return {'error': str(e)}
+        except Exception as e:
+            logger.error(f"Unexpected error in STK Push: {e}")
+            return {'error': str(e)}
